@@ -35,11 +35,17 @@ Electrum, instead of using the 'packages' directory.
 The 'full' extra contains some optional dependencies that we think
 are often useful but they are not strictly needed.
 
-If you cloned the git repository, you need to compile extra files
-before you can run Electrum. Read the next section, "Development
-Version".
+Trezor
+===============
 
+First, you need to install Trezor Bridge (https://wallet.trezor.io/#/bridge). Check if your Trezor is working by visiting trezor's website (https://wallet.trezor.io/)
 
+If you are using Linux, you should follow these steps::
+
+    sudo apt-get install python-dev cython libusb-1.0-0-dev libudev-dev git
+    sudo pip3 install setuptools
+    sudo pip3 install trezor
+    
 
 Development version
 ===================
@@ -47,7 +53,7 @@ Development version
 Check out the code from Github::
 
     git clone git://github.com/smartcash/electrum-smart.git
-    cd electrum
+    cd electrum-smart
 
 Run install (this should install dependencies)::
 

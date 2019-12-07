@@ -30,6 +30,7 @@ import imp
 import pkgutil
 import time
 import threading
+from typing import NamedTuple, Any, Union, TYPE_CHECKING, Optional
 
 from .util import print_error
 from .i18n import _
@@ -223,19 +224,21 @@ class BasePlugin(PrintError):
                 l.append((self, getattr(self, k)))
                 hooks[k] = l
 
-    def diagnostic_name(self):
-        return self.name
-
     def __str__(self):
         return self.name
 
     def close(self):
         # remove self from hooks
-        for k in dir(self):
-            if k in hook_names:
-                l = hooks.get(k, [])
-                l.remove((self, getattr(self, k)))
-                hooks[k] = l
+        for attr_name in dir(self):
+            if attr_name in hook_names:
+                # found attribute in self that is also the name of a hook
+                l = hooks.get(attr_name, [])
+                try:
+                    l.remove((self, getattr(self, attr_name)))
+                except ValueError:
+                    # maybe attr name just collided with hook name and was not hook
+                    continue
+                hooks[attr_name] = l
         self.parent.close_plugin(self)
         self.on_close()
 
@@ -261,14 +264,33 @@ class BasePlugin(PrintError):
         pass
 
 
-class DeviceNotFoundError(Exception):
-    pass
+class DeviceNotFoundError(Exception): pass
+class DeviceUnpairableError(Exception): pass
+class HardwarePluginLibraryUnavailable(Exception): pass
 
-class DeviceUnpairableError(Exception):
-    pass
 
-Device = namedtuple("Device", "path interface_number id_ product_key usage_page")
-DeviceInfo = namedtuple("DeviceInfo", "device label initialized")
+class Device(NamedTuple):
+    path: Union[str, bytes]
+    interface_number: int
+    id_: str
+    product_key: Any   # when using hid, often Tuple[int, int]
+    usage_page: int
+    transport_ui_string: str
+
+
+class DeviceInfo(NamedTuple):
+    device: Device
+    label: Optional[str] = None
+    initialized: Optional[bool] = None
+    exception: Optional[Exception] = None
+
+
+class HardwarePluginToScan(NamedTuple):
+    name: str
+    description: str
+    plugin: Optional['HW_PluginBase']
+    exception: Optional[Exception]
+
 
 class DeviceMgr(ThreadJob, PrintError):
     '''Manages hardware clients.  A client communicates over a hardware
@@ -302,7 +324,7 @@ class DeviceMgr(ThreadJob, PrintError):
     hidapi are implemented.'''
 
     def __init__(self, config):
-        super(DeviceMgr, self).__init__()
+        ThreadJob.__init__(self)
         # Keyed by xpub.  The value is the device id
         # has been paired, and None otherwise.
         self.xpub_ids = {}
@@ -346,7 +368,7 @@ class DeviceMgr(ThreadJob, PrintError):
             return client
         client = plugin.create_client(device, handler)
         if client:
-            self.print_error("Registering", client)
+            print_error(f"Registering {client}")
             with self.lock:
                 self.clients[client] = (device.path, device.id_)
         return client
@@ -458,11 +480,13 @@ class DeviceMgr(ThreadJob, PrintError):
               'its seed (and passphrase, if any).  Otherwise all bitcoins you '
               'receive will be unspendable.').format(plugin.device))
 
-    def unpaired_device_infos(self, handler, plugin, devices=None):
+    def unpaired_device_infos(self, handler, plugin: 'HW_PluginBase', devices=None,
+                              include_failing_clients=False):
         '''Returns a list of DeviceInfo objects: one for each connected,
         unpaired device accepted by the plugin.'''
         if not plugin.libraries_available:
-            raise Exception('Missing libraries for {}'.format(plugin.name))
+            message = plugin.get_library_not_available_message()
+            raise HardwarePluginLibraryUnavailable(message)
         if devices is None:
             devices = self.scan_devices()
         devices = [dev for dev in devices if not self.xpub_by_id(dev.id_)]
@@ -470,10 +494,18 @@ class DeviceMgr(ThreadJob, PrintError):
         for device in devices:
             if device.product_key not in plugin.DEVICE_IDS:
                 continue
-            client = self.create_client(device, handler, plugin)
+            try:
+                client = self.create_client(device, handler, plugin)
+            except Exception as e:
+                print_error(f'failed to create client for {plugin.name} at {device.path}: {repr(e)}')
+                if include_failing_clients:
+                    infos.append(DeviceInfo(device=device, exception=e))
+                continue
             if not client:
                 continue
-            infos.append(DeviceInfo(device, client.label(), client.is_initialized()))
+            infos.append(DeviceInfo(device=device,
+                                    label=client.label(),
+                                    initialized=client.is_initialized()))
 
         return infos
 
@@ -533,8 +565,12 @@ class DeviceMgr(ThreadJob, PrintError):
                 if len(id_) == 0:
                     id_ = str(d['path'])
                 id_ += str(interface_number) + str(usage_page)
-                devices.append(Device(d['path'], interface_number,
-                                      id_, product_key, usage_page))
+                devices.append(Device(path=d['path'],
+                                      interface_number=interface_number,
+                                      id_=id_,
+                                      product_key=product_key,
+                                      usage_page=usage_page,
+                                      transport_ui_string='hid'))
         return devices
 
     def scan_devices(self):

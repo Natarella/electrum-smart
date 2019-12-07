@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME_ROOT=electrum-smart
-PYTHON_VERSION=3.5.4
+PYTHON_VERSION=3.6.8
 
 # These settings probably don't need any change
 export WINEPREFIX=/opt/wine64
@@ -20,7 +20,7 @@ mkdir -p tmp
 cd tmp
 
 BUILD_BRANCH="master"
-#BUILD_BRANCH="4.0.x"
+#BUILD_BRANCH="trezorlib-compatibility"
 
 
 for repo in electrum-smart; do

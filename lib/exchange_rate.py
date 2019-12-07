@@ -388,7 +388,7 @@ class CryptoCompare(ExchangeBase):
         return {'USD': Decimal(json['USD']), 'EUR': Decimal(json['EUR']), 'THB': Decimal(json['THB']), 'BTC': Decimal(json['BTC']), 'ETH': Decimal(json['ETH'])}
 
     def history_ccys(self):
-        return ['AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'CZK', 'DKK', 'EUR',
+        return ['AUD', 'CAD', 'CHF', 'CLP', 'CNY', 'DKK', 'EUR',
                 'GBP', 'HKD', 'HUF', 'IDR', 'ILS', 'INR', 'JPY', 'KRW', 'MXN',
                 'MYR', 'NOK', 'NZD', 'PHP', 'PKR', 'PLN', 'RUB', 'SEK', 'SGD',
                 'THB', 'TRY', 'TWD', 'ZAR']

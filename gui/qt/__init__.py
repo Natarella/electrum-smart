@@ -29,7 +29,7 @@ import traceback
 
 
 try:
-    import PyQt5
+    import PyQt5.QtCore as QtCore
 except Exception:
     sys.exit("Error: Could not import PyQt5 on Linux systems, you may try 'sudo apt-get install python3-pyqt5'")
 

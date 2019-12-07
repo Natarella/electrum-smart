@@ -3,9 +3,9 @@
 
 import sys, os, re
 import traceback, platform
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from PyQt5 import QtWidgets
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 from electrum_smart import util
 
 
@@ -17,9 +17,9 @@ else:
     MONOSPACE_FONT = 'monospace'
 
 
-class Console(QtWidgets.QPlainTextEdit):
+class Console(QPlainTextEdit):
     def __init__(self, prompt='>> ', startup_message='', parent=None):
-        QtWidgets.QPlainTextEdit.__init__(self, parent)
+        QPlainTextEdit.__init__(self, parent)
 
         self.prompt = prompt
         self.history = []
@@ -27,9 +27,9 @@ class Console(QtWidgets.QPlainTextEdit):
         self.construct = []
 
         self.setGeometry(50, 75, 600, 400)
-        self.setWordWrapMode(QtGui.QTextOption.WrapAnywhere)
+        self.setWordWrapMode(QTextOption.WrapAnywhere)
         self.setUndoRedoEnabled(False)
-        self.document().setDefaultFont(QtGui.QFont(MONOSPACE_FONT, 10, QtGui.QFont.Normal))
+        self.document().setDefaultFont(QFont(MONOSPACE_FONT, 10, QFont.Normal))
         self.showMessage(startup_message)
 
         self.updateNamespace({'run':self.run_script})
@@ -68,7 +68,7 @@ class Console(QtWidgets.QPlainTextEdit):
         self.completions_visible = False
 
         self.appendPlainText(prompt)
-        self.moveCursor(QtGui.QTextCursor.End)
+        self.moveCursor(QTextCursor.End)
 
     def getCommand(self):
         doc = self.document()
@@ -312,7 +312,7 @@ welcome_message = '''
 '''
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     console = Console(startup_message=welcome_message)
     console.updateNamespace({'myVar1' : app, 'myVar2' : 1234})
     console.show()
