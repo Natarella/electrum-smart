@@ -30,12 +30,16 @@ try:
     RECOVERY_TYPE_SCRAMBLED_WORDS = RecoveryDeviceType.ScrambledWords
     RECOVERY_TYPE_MATRIX = RecoveryDeviceType.Matrix
 
+    from trezorlib.client import PASSPHRASE_ON_DEVICE
+
     TREZORLIB = True
 except Exception as e:
     print_error('error importing trezorlib')
     TREZORLIB = False
 
     RECOVERY_TYPE_SCRAMBLED_WORDS, RECOVERY_TYPE_MATRIX = range(2)
+
+    PASSPHRASE_ON_DEVICE = object()
 
 # TREZOR initialization methods
 TIM_NEW, TIM_RECOVER = range(2)
@@ -110,8 +114,8 @@ class TrezorPlugin(HW_PluginBase):
     libraries_URL = 'https://github.com/trezor/python-trezor'
     minimum_firmware = (1, 5, 2)
     keystore_class = TrezorKeyStore
-    minimum_library = (0, 11, 0)
-    maximum_library = (0, 12)
+    minimum_library = (0, 12, 0)
+    maximum_library = (0, 13)
     SUPPORTED_XTYPES = ('standard', 'p2wpkh-p2sh', 'p2wpkh', 'p2wsh-p2sh', 'p2wsh')
     DEVICE_IDS = (TREZOR_PRODUCT_KEY,)
 

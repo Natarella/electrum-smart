@@ -28,7 +28,7 @@ from electrum_smart.plugins import BasePlugin, hook
 from electrum_smart.util import bfh, bh2u, versiontuple
 from electrum_smart.i18n import _
 from electrum_smart.bitcoin import is_address, TYPE_SCRIPT
-
+from electrum_smart.util import print_error
 
 class HW_PluginBase(BasePlugin):
     # Derived classes provide:
@@ -110,7 +110,7 @@ class HW_PluginBase(BasePlugin):
                     _("Library version for '{}' is incompatible.").format(self.name)
                     + '\nInstalled: {}, Needed: {} <= x < {}'
                     .format(library_version, version_str(self.minimum_library), max_version_str))
-            self.logger.warning(self.libraries_available_message)
+            self.print_error("", self.libraries_available_message)
             return False
 
         return True

@@ -286,7 +286,7 @@ class SmartrewardsTab(QWidget):
     def update(self):
         self.roundLabel.setText(self.manager.rewards_info.get_rewards_cycle())
         self.percentLabel.setText(str(self.manager.rewards_info.get_percent_rewards()))
-        self.percentLabel2.setText(str(self.manager.rewards_info.get_percent_rewards2()))
+        #self.percentLabel2.setText(str(self.manager.rewards_info.get_percent_rewards2()))
         self.nextRoundLabel.setText(self.get_next_round())
         self.sumLabel.setText('{} SMART'.format(self.get_sum_estimated_rewards()))
 
