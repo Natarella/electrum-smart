@@ -14,7 +14,7 @@ from . import util
 
 # Background color for enabled smartnodes.
 ENABLED_SMARTNODE_BG = '#80ff80'
-SMARTNODE_MIN_VERSION = '90031'
+SMARTNODE_MIN_VERSION = '90032'
 SMARTNODE_DEFAULT_PORT = '9678'
 
 def smartnode_status(status):

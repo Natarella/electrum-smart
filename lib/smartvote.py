@@ -57,8 +57,8 @@ class NetworkAddress(object):
 class MasternodePing(object):
     """A smartnode ping message."""
     @classmethod
-    def deserialize(cls, vds, protocol_version=90031):
-        if protocol_version <= 90031:
+    def deserialize(cls, vds, protocol_version=90032):
+        if protocol_version <= 90032:
             vin = parse_input(vds)
         else:
             vin = parse_outpoint(vds)
@@ -90,7 +90,7 @@ class MasternodePing(object):
         return cls(**kwargs)
 
     def __init__(self, vin=None, block_hash='', sig_time=0, sig='',
-                 protocol_version=90031):
+                 protocol_version=90032):
         if vin is None:
             vin = {'prevout_hash':'', 'prevout_n': 0, 'scriptSig': '', 'sequence':0xffffffff}
         else:
@@ -104,7 +104,7 @@ class MasternodePing(object):
     def serialize(self, vds=None):
         if not vds:
             vds = BCDataStream()
-        if self.protocol_version <= 90031:
+        if self.protocol_version <= 90032:
             serialize_input(vds, self.vin)
         else:
             serialize_outpoint(vds, self.vin)
@@ -197,7 +197,7 @@ class MasternodeAnnounce(object):
     """
     def __init__(self, alias='', vin=None, addr=NetworkAddress(),
                  collateral_key='', delegate_key='', sig='', sig_time=0,
-                 protocol_version=90031, last_ping=MasternodePing(),
+                 protocol_version=90032, last_ping=MasternodePing(),
                  announced=False):
         self.alias = alias
         if vin is None:
@@ -257,7 +257,7 @@ class MasternodeAnnounce(object):
             sig_time = vds.read_int64()
 
             protocol_version = vds.read_uint32()
-            if protocol_version in [90031]:
+            if protocol_version in [90032]:
                 return True
             else:
                 return False
