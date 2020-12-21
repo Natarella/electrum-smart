@@ -527,7 +527,7 @@ class Abstract_Wallet(PrintError):
             delta -= v
         # add the value of the coins received at address
         d = self.txo.get(tx_hash, {}).get(address, [])
-        for n, v, cb in d:
+        for n, v, cb, tl in d:
             delta += v
         return delta
 
@@ -556,7 +556,7 @@ class Abstract_Wallet(PrintError):
                 is_mine = True
                 is_relevant = True
                 d = self.txo.get(item['prevout_hash'], {}).get(addr, [])
-                for n, v, cb in d:
+                for n, v, cb, tl in d:
                     if n == item['prevout_n']:
                         value = v
                         break
@@ -570,7 +570,7 @@ class Abstract_Wallet(PrintError):
                 is_partial = True
         if not is_mine:
             is_partial = False
-        for addr, value in tx.get_outputs():
+        for addr, value, lockTime in tx.get_outputs():
             v_out += value
             if addr in addresses:
                 v_out_mine += value
@@ -650,8 +650,8 @@ class Abstract_Wallet(PrintError):
         sent = {}
         for tx_hash, height in h:
             l = self.txo.get(tx_hash, {}).get(address, [])
-            for n, v, is_cb in l:
-                received[tx_hash + ':%d'%n] = (height, v, is_cb)
+            for n, v, is_cb, time_lock in l:
+                received[tx_hash + ':%d'%n] = (height, v, is_cb, time_lock)
         for tx_hash, height in h:
             l = self.txi.get(tx_hash, {}).get(address, [])
             for txi, v in l:
@@ -666,7 +666,7 @@ class Abstract_Wallet(PrintError):
                 self.frozen_coins.remove(txi)
         out = {}
         for txo, v in coins.items():
-            tx_height, value, is_cb = v
+            tx_height, value, is_cb, time_lock = v
             prevout_hash, prevout_n = txo.split(':')
             x = {
                 'address':address,
@@ -675,6 +675,7 @@ class Abstract_Wallet(PrintError):
                 'prevout_hash':prevout_hash,
                 'height':tx_height,
                 'coinbase':is_cb,
+                'time_lock':time_lock,
                 'is_frozen_coin': txo in self.frozen_coins
             }
             out[txo] = x
@@ -690,7 +691,7 @@ class Abstract_Wallet(PrintError):
         received, sent = self.get_addr_io(address)
         c = u = x = 0
         local_height = self.get_local_height()
-        for txo, (tx_height, v, is_cb) in received.items():
+        for txo, (tx_height, v, is_cb, time_lock) in received.items():
             if exclude_frozen_coins and txo in self.frozen_coins:
                 continue
             if is_cb and tx_height + COINBASE_MATURITY > local_height:
@@ -725,6 +726,13 @@ class Abstract_Wallet(PrintError):
                     continue
                 if mature and x['coinbase'] and x['height'] + COINBASE_MATURITY > self.get_local_height():
                     continue
+                if x['time_lock'] and x['time_lock'] > 0:
+                    if x['time_lock'] > bitcoin.LOCKTIME_THRESHOLD:
+                        if x['time_lock'] > int(time.time()):
+                            continue
+                    else:
+                        if x['time_lock'] > self.get_local_height():
+                            continue
                 coins.append(x)
                 continue
         return coins
@@ -803,7 +811,7 @@ class Abstract_Wallet(PrintError):
                     return addr
 
     def get_txout_address(self, txo):
-        _type, x, v = txo
+        _type, x, v, l = txo
         if _type == TYPE_ADDRESS:
             addr = x
         elif _type == TYPE_PUBKEY:
@@ -913,12 +921,13 @@ class Abstract_Wallet(PrintError):
             self.txo[tx_hash] = d = {}
             for n, txo in enumerate(tx.outputs()):
                 v = txo[2]
+                time_lock = txo[3]
                 ser = tx_hash + ':%d'%n
                 addr = self.get_txout_address(txo)
                 if addr and self.is_mine(addr):
                     if d.get(addr) is None:
                         d[addr] = []
-                    d[addr].append((n, v, is_coinbase))
+                    d[addr].append((n, v, is_coinbase, time_lock))
                 # give v to txi that spends me
                 next_tx = self.pruned_txo.get(ser)
                 if next_tx is not None:
@@ -1175,6 +1184,7 @@ class Abstract_Wallet(PrintError):
     def get_tx_status(self, tx_hash, height, conf, timestamp):
         from .util import format_time
         extra = []
+        lockTime = 0
         if conf == 0:
             tx = self.transactions.get(tx_hash)
             if not tx:
@@ -1203,9 +1213,21 @@ class Abstract_Wallet(PrintError):
             else:
                 status = 2
         else:
-            status = 3 + min(conf, 6)
+            # Check if this is a time locked transaction
+            tx = self.transactions.get(tx_hash)
+            if not tx:
+                return 2, 'unknown'
+            for addr, v, l in tx.get_outputs():
+                if self.is_mine(addr) and l:
+                    lockTime = l
+            status = 10 if lockTime > 0 else 3 + min(conf, 6)
         time_str = format_time(timestamp) if timestamp else _("unknown")
         status_str = TX_STATUS[status] if status < 4 else time_str
+        if lockTime > 0:
+            if lockTime > bitcoin.LOCKTIME_THRESHOLD:
+                status_str += " - locked until " + format_time(lockTime)
+            else:
+                status_str += " - locked until block " + lockTime
         if extra:
             status_str += ' [%s]'%(', '.join(extra))
         return status, status_str
@@ -1222,7 +1244,7 @@ class Abstract_Wallet(PrintError):
         # check outputs
         i_max = None
         for i, o in enumerate(outputs):
-            _type, data, value = o
+            _type, data, value, lockTime = o
             if _type == TYPE_ADDRESS:
                 if not is_address(data):
                     raise Exception("Invalid SmartCash address: {}".format(data))
@@ -1292,15 +1314,15 @@ class Abstract_Wallet(PrintError):
                 inputs = inputs[:MAX_INPUTS]
 
             sendable = sum(map(lambda x:x['value'], inputs))
-            _type, data, value = outputs[i_max]
-            outputs[i_max] = (_type, data, 0)
+            _type, data, value, lockTime = outputs[i_max]
+            outputs[i_max] = (_type, data, 0, None)
             tx = Transaction.from_io(inputs, outputs[:])
             fee = fee_estimator(tx.estimated_size())
             # SmartCash Fee
             if(fee < 100000):
                 fee = 100000
             amount = max(0, sendable - tx.output_value() - fee)
-            outputs[i_max] = (_type, data, amount)
+            outputs[i_max] = (_type, data, amount, None)
             tx = Transaction.from_io(inputs, outputs[:])
 
         # SmartCash max inputs

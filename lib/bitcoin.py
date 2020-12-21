@@ -44,6 +44,7 @@ from Cryptodome.Hash import keccak
 
 COINBASE_MATURITY = 100
 COIN = 100000000
+LOCKTIME_THRESHOLD = 500000000
 
 # supported types of transaction outputs
 TYPE_ADDRESS = 0
@@ -354,7 +355,7 @@ def script_to_address(script, *, net=None):
     assert t == TYPE_ADDRESS
     return addr
 
-def address_to_script(addr, *, net=None):
+def address_to_script(addr, lockTime=0, *, net=None):
     if net is None:
         net = constants.net
     witver, witprog = segwit_addr.decode(net.SEGWIT_HRP, addr)
@@ -367,9 +368,15 @@ def address_to_script(addr, *, net=None):
         return script
     addrtype, hash_160 = b58_address_to_hash160(addr)
     if addrtype == net.ADDRTYPE_P2PKH:
-        script = '76a9'                                      # op_dup, op_hash_160
-        script += push_script(bh2u(hash_160))
-        script += '88ac'                                     # op_equalverify, op_checksig
+        if lockTime and lockTime > 0:
+            script = push_script(lockTime.to_bytes(4, 'little').hex())
+            script += 'b17576a9'                             # op_checklocktimeverify, op_drop, op_dup, op_hash_160
+            script += push_script(bh2u(hash_160))
+            script += '88ac'                                 # op_equalverify, op_checksig
+        else:
+            script = '76a9'                                  # op_dup, op_hash_160
+            script += push_script(bh2u(hash_160))
+            script += '88ac'                                 # op_equalverify, op_checksig
     elif addrtype == net.ADDRTYPE_P2SH:
         script = 'a9'                                        # op_hash_160
         script += push_script(bh2u(hash_160))

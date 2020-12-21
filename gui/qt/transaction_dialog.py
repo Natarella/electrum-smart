@@ -266,6 +266,9 @@ class TxDialog(QDialog, MessageBoxMixin):
         chg = QTextCharFormat()
         chg.setBackground(QBrush(ColorScheme.YELLOW.as_color(background=True)))
         chg.setToolTip(_("Wallet change address"))
+        loc = QTextCharFormat()
+        loc.setBackground(QBrush(ColorScheme.RED.as_color(background=True)))
+        loc.setToolTip(_("Time locked address"))
 
         def text_format(addr):
             if self.wallet.is_mine(addr):
@@ -307,8 +310,11 @@ class TxDialog(QDialog, MessageBoxMixin):
         o_text.setReadOnly(True)
         o_text.setMaximumHeight(100)
         cursor = o_text.textCursor()
-        for addr, v in self.tx.get_outputs():
-            cursor.insertText(addr, text_format(addr))
+        for addr, v, l in self.tx.get_outputs():
+            if l is not None:
+                cursor.insertText(addr, loc)
+            else:
+                cursor.insertText(addr, text_format(addr))
             if v is not None:
                 cursor.insertText('\t', ext)
                 cursor.insertText(format_amount(v), ext)
