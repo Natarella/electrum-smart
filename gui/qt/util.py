@@ -618,6 +618,16 @@ class ButtonsTextEdit(QPlainTextEdit, ButtonsWidget):
         self.resizeButtons()
         return o
 
+class PasswordLineEdit(QLineEdit):
+    def __init__(self, *args, **kwargs):
+        QLineEdit.__init__(self, *args, **kwargs)
+        self.setEchoMode(QLineEdit.Password)
+
+    def clear(self):
+        # Try to actually overwrite the memory.
+        # This is really just a best-effort thing...
+        self.setText(len(self.text()) * " ")
+        super().clear()
 
 class TaskThread(QThread):
     '''Thread that runs background tasks.  Callbacks are guaranteed
