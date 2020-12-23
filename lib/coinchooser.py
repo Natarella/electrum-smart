@@ -178,7 +178,7 @@ class CoinChooserBase(PrintError):
         # size of the change output, add it to the transaction.
         dust = sum(amount for amount in amounts if amount < dust_threshold)
         amounts = [amount for amount in amounts if amount >= dust_threshold]
-        change = [(TYPE_ADDRESS, addr, amount)
+        change = [(TYPE_ADDRESS, addr, amount, None)
                   for addr, amount in zip(change_addrs, amounts)]
         self.print_error('change:', change)
         if dust:

@@ -145,7 +145,7 @@ class PayToEdit(CompletionTextEdit, ScanQRTextEdit):
                 self.errors.append((i, line.strip()))
                 continue
 
-            outputs.append((_type, to_address, amount))
+            outputs.append((_type, to_address, amount, None))
             if amount == '!':
                 is_max = True
             else:
@@ -175,7 +175,7 @@ class PayToEdit(CompletionTextEdit, ScanQRTextEdit):
                 amount = self.amount_edit.get_amount()
 
             _type, addr = self.payto_address
-            self.outputs = [(_type, addr, amount)]
+            self.outputs = [(_type, addr, amount, None)]
 
         return self.outputs[:]
 

@@ -420,23 +420,29 @@ def get_address_from_output_script(_bytes, *, net=None):
     # 65 BYTES:... CHECKSIG
     match = [ opcodes.OP_PUSHDATA4, opcodes.OP_CHECKSIG ]
     if match_decoded(decoded, match):
-        return TYPE_PUBKEY, bh2u(decoded[0][1])
+        return TYPE_PUBKEY, bh2u(decoded[0][1]), None
 
     # Pay-by-Bitcoin-address TxOuts look like:
     # DUP HASH160 20 BYTES:... EQUALVERIFY CHECKSIG
     match = [ opcodes.OP_DUP, opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUALVERIFY, opcodes.OP_CHECKSIG ]
     if match_decoded(decoded, match):
-        return TYPE_ADDRESS, hash160_to_p2pkh(decoded[2][1], net=net)
+        return TYPE_ADDRESS, hash160_to_p2pkh(decoded[2][1], net=net), None
+
+    # p2pkh locked
+    match = [ opcodes.OP_PUSHDATA4, opcodes.OP_CHECKLOCKTIMEVERIFY, opcodes.OP_DROP, opcodes.OP_DUP, opcodes.OP_HASH160,
+              opcodes.OP_PUSHDATA4, opcodes.OP_EQUALVERIFY, opcodes.OP_CHECKSIG ]
+    if match_decoded(decoded, match):
+        return TYPE_ADDRESS, hash160_to_p2pkh(decoded[5][1], net=net), int.from_bytes(decoded[0][1], 'little')
 
     # p2sh
     match = [ opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUAL ]
     if match_decoded(decoded, match):
-        return TYPE_ADDRESS, hash160_to_p2sh(decoded[1][1], net=net)
+        return TYPE_ADDRESS, hash160_to_p2sh(decoded[1][1], net=net), None
 
     #SmartMining
     match = [opcodes.OP_RETURN, opcodes.OP_PUSHDATA4]
     if match_decoded(decoded, match):
-        return TYPE_SCRIPT, ''
+        return TYPE_SCRIPT, '', None
 
     # segwit address
     #possible_witness_versions = [opcodes.OP_0] + list(range(opcodes.OP_1, opcodes.OP_16 + 1))
@@ -445,7 +451,7 @@ def get_address_from_output_script(_bytes, *, net=None):
     #    if match_decoded(decoded, match):
     #        return TYPE_ADDRESS, hash_to_segwit_addr(decoded[1][1], witver=witver, net=net)
 
-    return TYPE_SCRIPT, bh2u(_bytes)
+    return TYPE_SCRIPT, bh2u(_bytes), None
 
 
 def parse_outpoint(vds):
@@ -549,7 +555,7 @@ def parse_output(vds, i):
     d = {}
     d['value'] = vds.read_int64()
     scriptPubKey = vds.read_bytes(vds.read_compact_size())
-    d['type'], d['address'] = get_address_from_output_script(scriptPubKey)
+    d['type'], d['address'], d['lockTime'] = get_address_from_output_script(scriptPubKey)
     d['scriptPubKey'] = bh2u(scriptPubKey)
     d['prevout_n'] = i
     return d
@@ -687,7 +693,7 @@ class Transaction:
             return
         d = deserialize(self.raw)
         self._inputs = d['inputs']
-        self._outputs = [(x['type'], x['address'], x['value']) for x in d['outputs']]
+        self._outputs = [(x['type'], x['address'], x['value'], x['lockTime']) for x in d['outputs']]
         self.locktime = d['lockTime']
         self.version = d['version']
         return d
@@ -701,11 +707,11 @@ class Transaction:
         return self
 
     @classmethod
-    def pay_script(self, output_type, addr):
+    def pay_script(self, output_type, addr, lockTime=0):
         if output_type == TYPE_SCRIPT:
             return addr
         elif output_type == TYPE_ADDRESS:
-            return bitcoin.address_to_script(addr)
+            return bitcoin.address_to_script(addr, lockTime)
         elif output_type == TYPE_PUBKEY:
             return bitcoin.public_key_to_p2pk_script(addr)
         else:
@@ -886,9 +892,9 @@ class Transaction:
         self._outputs.sort(key = lambda o: (o[2], self.pay_script(o[0], o[1])))
 
     def serialize_output(self, output):
-        output_type, addr, amount = output
+        output_type, addr, amount, lockTime = output
         s = int_to_hex(amount, 8)
-        script = self.pay_script(output_type, addr)
+        script = self.pay_script(output_type, addr, lockTime)
         s += var_int(len(script)//2)
         s += script
         return s
@@ -962,7 +968,7 @@ class Transaction:
         return sum(x['value'] for x in self.inputs())
 
     def output_value(self):
-        return sum(val for tp, addr, val in self.outputs())
+        return sum(val for tp, addr, val, lockTime in self.outputs())
 
     def get_fee(self):
         return self.input_value() - self.output_value()
@@ -1077,14 +1083,14 @@ class Transaction:
     def get_outputs(self):
         """convert pubkeys to addresses"""
         o = []
-        for type, x, v in self.outputs():
+        for type, x, v, l in self.outputs():
             if type == TYPE_ADDRESS:
                 addr = x
             elif type == TYPE_PUBKEY:
                 addr = bitcoin.public_key_to_p2pkh(bfh(x))
             else:
                 addr = 'SCRIPT ' + x
-            o.append((addr,v))      # consider using yield (addr, v)
+            o.append((addr,v,l))      # consider using yield (addr, v, l)
         return o
 
     def get_output_addresses(self):

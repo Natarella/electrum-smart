@@ -48,6 +48,7 @@ TX_ICONS = [
     "clock4.png",
     "clock5.png",
     "confirmed.png",
+    "lock.png",
 ]
 
 
