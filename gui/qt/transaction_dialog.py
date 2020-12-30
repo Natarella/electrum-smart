@@ -36,9 +36,10 @@ from electrum_smart.i18n import _
 from electrum_smart.plugins import run_hook
 from electrum_smart import simple_config
 
-from electrum_smart.util import bfh
+from electrum_smart.util import bfh, format_time
 from electrum_smart.wallet import AddTransactionException
 from electrum_smart.transaction import SerializationError
+from electrum_smart.bitcoin import LOCKTIME_THRESHOLD
 
 from .util import *
 
@@ -315,8 +316,17 @@ class TxDialog(QDialog, MessageBoxMixin):
                 cursor.insertText(addr, loc)
             else:
                 cursor.insertText(addr, text_format(addr))
+
             if v is not None:
                 cursor.insertText('\t', ext)
                 cursor.insertText(format_amount(v), ext)
+
+            if l is not None:
+                if l > LOCKTIME_THRESHOLD:
+                  lock_str = "\tlocked until " + format_time(l)
+                else:
+                  lock_str = "\tlocked until block " + str(l)
+                cursor.insertText(lock_str, ext)
+
             cursor.insertBlock()
         vbox.addWidget(o_text)

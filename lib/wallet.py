@@ -909,7 +909,7 @@ class Abstract_Wallet(PrintError):
                     self.spent_outpoints[ser] = tx_hash
                     # find value from prev output
                     dd = self.txo.get(prevout_hash, {})
-                    for n, v, is_cb in dd.get(addr, []):
+                    for n, v, is_cb, time_lock in dd.get(addr, []):
                         if n == prevout_n:
                             if d.get(addr) is None:
                                 d[addr] = []
@@ -1227,7 +1227,7 @@ class Abstract_Wallet(PrintError):
             if lockTime > bitcoin.LOCKTIME_THRESHOLD:
                 status_str += " - locked until " + format_time(lockTime)
             else:
-                status_str += " - locked until block " + lockTime
+                status_str += " - locked until block " + str(lockTime)
         if extra:
             status_str += ' [%s]'%(', '.join(extra))
         return status, status_str
