@@ -30,7 +30,7 @@ class UTXOList(MyTreeWidget):
     filter_columns = [0, 2]  # Address, Label
 
     def __init__(self, parent=None):
-        MyTreeWidget.__init__(self, parent, self.create_menu, [ _('Address'), _('Label'), _('Amount'), _('Height'), _('Output point')], 1)
+        MyTreeWidget.__init__(self, parent, self.create_menu, [ _('Address'), _('Label'), _('Amount'), _('Height'), _('Output point'), _('Lock time')], 1)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setSortingEnabled(True)
         self.wallet = self.parent.wallet if hasattr(self.parent, 'wallet') else None
@@ -48,10 +48,11 @@ class UTXOList(MyTreeWidget):
         for x in self.utxos:
             address = x.get('address')
             height = x.get('height')
+            lock_time = x.get('time_lock')
             name = self.get_name(x)
             label = self.wallet.get_label(x.get('prevout_hash'))
             amount = self.parent.format_amount(x['value'], whitespaces=True)
-            utxo_item = SortableTreeWidgetItem([address, label, amount, '%d'%height, name[0:10] + '...' + name[-2:]])
+            utxo_item = SortableTreeWidgetItem([address, label, amount, '%d'%height, name[0:10] + '...' + name[-2:], str(lock_time)])
             utxo_item.DataRole = Qt.UserRole + 100
             utxo_item.setFont(0, QFont(MONOSPACE_FONT))
             utxo_item.setFont(2, QFont(MONOSPACE_FONT))
