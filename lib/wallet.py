@@ -527,8 +527,14 @@ class Abstract_Wallet(PrintError):
             delta -= v
         # add the value of the coins received at address
         d = self.txo.get(tx_hash, {}).get(address, [])
-        for n, v, cb, tl in d:
-            delta += v
+        try:
+            for n, v, cb, tl in d:
+                delta += v
+        except ValueError:
+            # migrate from old wallet to new format with time-lock
+            for n, v, cb in d:
+                delta += v
+
         return delta
 
     def get_tx_value(self, txid):
@@ -556,10 +562,17 @@ class Abstract_Wallet(PrintError):
                 is_mine = True
                 is_relevant = True
                 d = self.txo.get(item['prevout_hash'], {}).get(addr, [])
-                for n, v, cb, tl in d:
-                    if n == item['prevout_n']:
-                        value = v
-                        break
+                try:
+                    for n, v, cb, tl in d:
+                        if n == item['prevout_n']:
+                            value = v
+                            break
+                except ValueError:
+                    # migrate from old wallet version
+                    for n, v, cb in d:
+                        if n == item['prevout_n']:
+                            value = v
+                            break
                 else:
                     value = None
                 if value is None:
@@ -650,8 +663,13 @@ class Abstract_Wallet(PrintError):
         sent = {}
         for tx_hash, height in h:
             l = self.txo.get(tx_hash, {}).get(address, [])
-            for n, v, is_cb, time_lock in l:
-                received[tx_hash + ':%d'%n] = (height, v, is_cb, time_lock)
+            try:
+                for n, v, is_cb, time_lock in l:
+                    received[tx_hash + ':%d'%n] = (height, v, is_cb, time_lock)
+            except ValueError:
+                # Migrating an old wallet to new format with time locks
+                for n, v, is_cb in l:
+                    received[tx_hash + ':%d'%n] = (height, v, is_cb, None)
         for tx_hash, height in h:
             l = self.txi.get(tx_hash, {}).get(address, [])
             for txi, v in l:
@@ -909,12 +927,21 @@ class Abstract_Wallet(PrintError):
                     self.spent_outpoints[ser] = tx_hash
                     # find value from prev output
                     dd = self.txo.get(prevout_hash, {})
-                    for n, v, is_cb, time_lock in dd.get(addr, []):
-                        if n == prevout_n:
-                            if d.get(addr) is None:
-                                d[addr] = []
-                            d[addr].append((ser, v))
-                            break
+                    try:
+                        for n, v, is_cb, time_lock in dd.get(addr, []):
+                            if n == prevout_n:
+                                if d.get(addr) is None:
+                                    d[addr] = []
+                                d[addr].append((ser, v))
+                                break
+                    except ValueError:
+                        # migrate from old wallet format
+                        for n, v, is_cb in dd.get(addr, []):
+                            if n == prevout_n:
+                                if d.get(addr) is None:
+                                    d[addr] = []
+                                d[addr].append((ser, v))
+                                break
                     else:
                         self.pruned_txo[ser] = tx_hash
             # add outputs
