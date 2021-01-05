@@ -846,7 +846,7 @@ class Transaction:
     def get_preimage_script(self, txin):
         pubkeys, x_pubkeys = self.get_sorted_pubkeys(txin)
         if txin['type'] == 'p2pkh':
-            return bitcoin.address_to_script(txin['address'])
+            return bitcoin.address_to_script(txin['address'], txin['time_lock'])
         elif txin['type'] in ['p2sh', 'p2wsh', 'p2wsh-p2sh']:
             return multisig_script(pubkeys, txin['num_sig'])
         elif txin['type'] in ['p2wpkh', 'p2wpkh-p2sh']:
