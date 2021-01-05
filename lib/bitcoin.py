@@ -369,7 +369,7 @@ def address_to_script(addr, lockTime=0, *, net=None):
     addrtype, hash_160 = b58_address_to_hash160(addr)
     if addrtype == net.ADDRTYPE_P2PKH:
         if lockTime and lockTime > 0:
-            script = push_script(lockTime.to_bytes(3, 'little').hex())
+            script = push_script(int_to_hex(lockTime))
             script += 'b17576a9'                             # op_checklocktimeverify, op_drop, op_dup, op_hash_160
             script += push_script(bh2u(hash_160))
             script += '88ac'                                 # op_equalverify, op_checksig

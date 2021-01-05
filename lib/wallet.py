@@ -482,6 +482,15 @@ class Abstract_Wallet(PrintError):
         """ return last known height if we are offline """
         return self.network.get_local_height() if self.network else self.storage.get('stored_height', 0)
 
+    def get_median_past_time(self):
+        """ return median past time as defined in BIP113 """
+        block_times = []
+        current_height = self.get_local_height()
+        for i in range(11):
+            block_times.append(self.network.blockchain().get_timestamp(current_height - i))
+        block_times.sort()
+        return block_times[5]
+
     def get_tx_height(self, tx_hash):
         """ Given a transaction, returns (height, conf, timestamp) """
         with self.lock:
@@ -1361,8 +1370,30 @@ class Abstract_Wallet(PrintError):
 
         # Sort the inputs and outputs deterministically
         tx.BIP_LI01_sort()
-        # Timelock tx to current height.
-        tx.locktime = self.get_local_height()
+
+        # Detect timelock format if there is any timelock input
+        timelock_format = 'unset'
+        for i in tx.inputs():
+            if i['time_lock'] and i['time_lock'] > 0:
+                if i['time_lock'] > LOCKTIME_THRESHOLD:
+                    if timelock_format == 'blockheight':
+                        raise Exception(
+                            'Cannot mix Timestamp and block based time-locked inputs in the same transaction. '
+                            'Consider using coin control to select inputs manually.')
+                    timelock_format = 'timestamp'
+                else:
+                    if timelock_format == 'timestamp':
+                        raise Exception(
+                            'Cannot mix Timestamp and block based time-locked inputs in the same transaction. '
+                            'Consider using coin control to select inputs manually.')
+                    timelock_format = 'blockheight'
+
+        # Set locktime to expected format
+        if timelock_format == 'timestamp':
+            tx.locktime = self.get_median_past_time() - 1
+        else:
+            tx.locktime = self.get_local_height()
+
         run_hook('make_unsigned_transaction', self, tx)
         return tx
 
