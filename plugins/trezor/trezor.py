@@ -430,7 +430,7 @@ class TrezorPlugin(HW_PluginBase):
         any_output_on_change_branch = is_any_tx_output_on_change_branch(tx)
 
         for o in tx.outputs():
-            (_type, address, amount) = o
+            (_type, address, amount, dummy) = o
             use_create_by_derivation = False
 
             info = tx.output_info.get(address)
