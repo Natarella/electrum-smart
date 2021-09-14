@@ -13,7 +13,7 @@ from electrum_smart import constants
 from ecdsa.ecdsa import generator_secp256k1
 from electrum_smart.bitcoin import EncodeBase58Check, DecodeBase58Check
 
-SMARTNODE_MIN_VERSION = '90032'
+SMARTNODE_MIN_VERSION = '90034'
 SMARTNODE_DEFAULT_PORT = '9678'
 
 class SmartnodeControlDialog(QDialog, PrintError):
