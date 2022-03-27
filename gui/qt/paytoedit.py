@@ -194,8 +194,8 @@ class PayToEdit(CompletionTextEdit, ScanQRTextEdit):
         docHeight = self.document().size().height()
         h = docHeight * lineHeight + 11
         if self.heightMin <= h <= self.heightMax:
-            self.setMinimumHeight(h)
-            self.setMaximumHeight(h)
+            self.setMinimumHeight(int(h))
+            self.setMaximumHeight(int(h))
         self.verticalScrollBar().hide()
 
     def qr_input(self):

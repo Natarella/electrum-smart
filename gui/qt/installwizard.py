@@ -38,8 +38,8 @@ class CosignWidget(QWidget):
         QWidget.__init__(self)
         self.R = QRect(0, 0, self.size, self.size)
         self.setGeometry(self.R)
-        self.setMinimumHeight(self.size)
-        self.setMaximumHeight(self.size)
+        self.setMinimumHeight(int(self.size))
+        self.setMaximumHeight(int(self.size))
         self.m = m
         self.n = n
 

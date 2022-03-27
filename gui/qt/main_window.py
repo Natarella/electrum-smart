@@ -3132,7 +3132,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
 
         w = QWidget()
         scroll.setWidget(w)
-        w.setMinimumHeight(plugins.count() * 35)
+        w.setMinimumHeight(int(plugins.count() * 35))
 
         grid = QGridLayout()
         grid.setColumnStretch(0,1)
