@@ -17,6 +17,18 @@ Electrum is a pure python application. If you want to use the
 Qt interface, install the Qt dependencies::
 
     sudo apt-get install python3-pyqt5
+  
+Ubuntu22 does not have a pip install option
+    curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py
+    sudo python3 get-pip.py
+    sudo pip install pyaes
+    sudo pip install ecdsa
+    sudo pip install qrcode
+    sudo pip install pbkdf2
+    sudo pip install jsonrpclib
+    sudo apt install python3-pycryptodome or pip3 install pycryptodomex
+    pip install pysocks
+    sudo apt-get install python3-setuptools python3-pyqt5
 
 If you downloaded the official package (tar.gz), you can run
 Electrum from its root directory, without installing it on your
